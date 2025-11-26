@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Notas - Empresa Marítima</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Gerador de Notas</h1>
+            <p class="subtitle">Gerencie os tipos de notas da sua empresa marítima</p>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Tipos de Notas</h2>
+                    <button id="btnNovaNota" class="btn btn-primary">+ Nova Nota</button>
+                    <button id="btnResetar" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">🔄 Resetar Templates</button>
+                </div>
+                <ul id="listaNotas" class="lista-notas">
+                    <!-- Lista de tipos de notas será preenchida dinamicamente -->
+                </ul>
+            </div>
+
+            <div class="editor-area">
+                <div id="editorVazio" class="editor-vazio">
+                    <p>Selecione um tipo de nota para editar ou crie uma nova</p>
+                </div>
+
+                <div id="editorNota" class="editor-nota" style="display: none;">
+                    <div class="editor-header">
+                        <input type="text" id="nomeNota" class="input-nome" placeholder="Nome do tipo de nota">
+                        <div class="editor-actions">
+                            <button id="btnVisualizar" class="btn btn-info">👁️ Visualizar</button>
+                            <button id="btnImprimir" class="btn btn-info">🖨️ Imprimir</button>
+                            <button id="btnSalvar" class="btn btn-success">💾 Salvar</button>
+                            <button id="btnExcluir" class="btn btn-danger">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                    <div class="editor-body">
+                        <div class="editor-tabs">
+                            <button class="tab-btn active" data-tab="editor">✏️ Editor HTML</button>
+                            <button class="tab-btn" data-tab="preview">👁️ Visualização</button>
+                        </div>
+                        <div class="tab-content active" id="tabEditor">
+                            <label for="editorTemplate">Template HTML da Nota:</label>
+                            <textarea id="editorTemplate" class="textarea-template" placeholder="Cole ou edite o template HTML da nota aqui..."></textarea>
+                            <p class="help-text">💡 Dica: Edite o HTML para personalizar o formato da nota. Use campos com bordas para áreas preenchíveis.</p>
+                        </div>
+                        <div class="tab-content" id="tabPreview">
+                            <iframe id="previewNota" class="preview-iframe"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

@@ -3,6 +3,7 @@ class GerenciadorNotas {
     constructor() {
         this.notas = [];
         this.notaAtual = null;
+        this.debounceTimer = null; // Para debounce do editor visual
         this.carregarNotas();
         this.inicializarEventos();
         this.renderizarLista();
@@ -10,11 +11,9 @@ class GerenciadorNotas {
 
     // Carregar notas do localStorage ou usar dados padrão
     carregarNotas() {
-        console.log('🔍 DEBUG: Carregando notas do localStorage...');
         const notasSalvas = localStorage.getItem('notasMaritimas');
         if (notasSalvas) {
             this.notas = JSON.parse(notasSalvas);
-            console.log('🔍 DEBUG: Notas carregadas:', this.notas.length);
             // Migrar notas antigas que usam "conteudo" para "template"
             let precisaSalvar = false;
             this.notas = this.notas.map(nota => {
@@ -53,31 +52,21 @@ class GerenciadorNotas {
             }
             
             // ATUALIZAR templates antigos que não têm logo
-            let templatesAtualizados = 0;
             this.notas = this.notas.map(nota => {
                 if (nota.nome && nota.nome.includes('CFN') && nota.template && !nota.template.includes('LOGO SEVEN')) {
-                    console.log('🔄 DEBUG: Atualizando template CFN antigo (sem logo)');
                     nota.template = this.getTemplateCFN();
                     precisaSalvar = true;
-                    templatesAtualizados++;
                 } else if (nota.nome && nota.nome.includes('Certificado de Retirada') && nota.template && !nota.template.includes('LOGO SEVEN')) {
-                    console.log('🔄 DEBUG: Atualizando template Certificado antigo (sem logo)');
                     nota.template = this.getTemplateCertificadoResiduo();
                     precisaSalvar = true;
-                    templatesAtualizados++;
                 }
                 return nota;
             });
-            
-            if (templatesAtualizados > 0) {
-                console.log(`✅ DEBUG: ${templatesAtualizados} template(s) atualizado(s) automaticamente com logo`);
-            }
             
             if (precisaSalvar) {
                 this.salvarNotas();
             }
         } else {
-            console.log('🔍 DEBUG: Nenhuma nota salva, criando templates padrão...');
             // Dados padrão com templates baseados nos documentos reais
             this.notas = [
                 {
@@ -91,18 +80,8 @@ class GerenciadorNotas {
                     template: this.getTemplateCertificadoResiduo()
                 }
             ];
-            console.log('✅ DEBUG: Templates padrão criados');
             this.salvarNotas();
         }
-        
-        // Verificar se as notas têm logo
-        this.notas.forEach(nota => {
-            if (nota.template && nota.template.includes('LOGO SEVEN')) {
-                console.log('✅ DEBUG: Nota', nota.nome, 'contém referência à logo');
-            } else {
-                console.warn('⚠️ DEBUG: Nota', nota.nome, 'NÃO contém referência à logo');
-            }
-        });
     }
 
     // Converter texto simples para HTML básico
@@ -303,7 +282,7 @@ class GerenciadorNotas {
             <tr>
                 <td style="width: 25%; padding: 8px; border: 1px solid #1d1b78; vertical-align: middle; text-align: center;">
                     <div class="logo-container" style="margin: 0;">
-                        <img src="assets/logo/LOGO SEVEN.svg" alt="SEVEN NAVEGAÇÃO" onerror="console.error('❌ Erro ao carregar logo:', this.src); this.style.display='none';" onload="console.log('✅ Logo carregada:', this.src);" />
+                        <img src="assets/logo/LOGO SEVEN.svg" alt="SEVEN NAVEGAÇÃO" onerror="this.style.display='none';" />
                     </div>
                 </td>
                 <td style="width: 75%; padding: 8px; border: 1px solid #1d1b78; border-left: 1px solid #1d1b78; vertical-align: middle;">
@@ -670,20 +649,25 @@ class GerenciadorNotas {
             <tr>
                 <td style="width: 25%; padding: 8px; border: 1px solid #1d1b78; vertical-align: middle; text-align: center;">
                     <div class="logo-container" style="margin: 0;">
-                        <img src="assets/logo/LOGO SEVEN.svg" alt="SEVEN NAVEGAÇÃO" style="max-width: 100%; height: auto;" onerror="console.error('❌ Erro ao carregar logo:', this.src); this.style.display='none';" onload="console.log('✅ Logo carregada:', this.src);" />
+                        <img src="assets/logo/LOGO SEVEN.svg" alt="SEVEN NAVEGAÇÃO" style="max-width: 100%; height: auto;" onerror="this.style.display='none';" />
                     </div>
                 </td>
                 <td style="width: 75%; padding: 8px; border: 1px solid #1d1b78; border-left: 1px solid #1d1b78; vertical-align: middle;">
-                    <h1 style="font-size: 16px; margin: 0 0 4px 0; color: #1d1b78; font-weight: bold; text-align: left;">CERTIFICADO DE RETIRADA DE RESÍDUO</h1>
-                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;"><strong>SERVI-PORTO - SERVIÇOS PORTUÁRIOS LTDA.</strong></p>
-                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">CNPJ: 12.097.762/0001-37</p>
-                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">Av. Senador Vitorino Freire, 1990 - Areinha / São Luis / MA. Brasil</p>
-                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">Telefone: (98) 3232-7259</p>
+                    <h1 style="font-size: 16px; margin: 0 0 4px 0; color: #1d1b78; font-weight: bold; text-align: left;">SEVEN NAVEGAÇÃO LTDA</h1>
+                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">Av. Dos Holandeses, Ed. tech Office, Salas 918 a 920 - Ponta D'Areia</p>
+                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">São Luís - MA - CEP: 65.077-357</p>
+                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">Fone: 98 99117-1988 e 99161-5880</p>
+                    <p style="font-size: 10px; margin: 2px 0; color: #000; line-height: 1.3; text-align: left;">www.sevennav.com.br | recepcao.apoioportuario@gmail.com</p>
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="text-align: right; padding: 6px; border: 1px solid #1d1b78; border-top: 1px solid #1d1b78;">
-                    <strong style="font-size: 12px; color: #1d1b78;">CERTIFICADO N. (Certificate No.):</strong> <span style="border-bottom: 2px solid #1d1b78; padding: 0 15px; font-weight: bold; font-size: 14px; margin-left: 8px;">&nbsp;</span>
+                <td colspan="2" style="text-align: center; padding: 6px; border: 1px solid #1d1b78; border-top: 1px solid #1d1b78;">
+                    <div style="font-size: 14px; font-weight: bold; color: #1d1b78; margin-bottom: 4px;">
+                        CERTIFICADO DE RETIRADA DE RESÍDUO
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #1d1b78; margin-top: 4px;">
+                        <strong>CERTIFICADO N. (Certificate No.):</strong> <span style="border-bottom: 2px solid #1d1b78; padding: 0 15px; font-weight: bold; font-size: 14px; margin-left: 8px;">&nbsp;</span>
+                    </div>
                 </td>
             </tr>
         </table>
@@ -821,7 +805,10 @@ class GerenciadorNotas {
             content.classList.remove('active');
         });
 
-        if (tab === 'editor') {
+        if (tab === 'visual') {
+            document.getElementById('tabVisual').classList.add('active');
+            this.atualizarEditorVisual();
+        } else if (tab === 'editor') {
             document.getElementById('tabEditor').classList.add('active');
         } else if (tab === 'preview') {
             document.getElementById('tabPreview').classList.add('active');
@@ -903,6 +890,7 @@ class GerenciadorNotas {
         if (editor) {
             editor.value = this.notaAtual.template || '';
         }
+        this.atualizarEditorVisual();
         this.atualizarPreview();
     }
 
@@ -924,6 +912,833 @@ class GerenciadorNotas {
         }
     }
 
+    // Função auxiliar para extrair valor de campo .blank após um label
+    extrairValorCampo(body, labelText) {
+        const labels = body.querySelectorAll('.label');
+        for (let label of labels) {
+            if (label.textContent.includes(labelText)) {
+                // Buscar o próximo .blank na mesma linha ou próxima linha
+                const row = label.closest('tr');
+                if (row) {
+                    const blank = row.querySelector('.blank');
+                    if (blank) {
+                        return blank.textContent.trim();
+                    }
+                }
+                // Se não encontrar na mesma linha, buscar na próxima
+                const nextRow = row?.nextElementSibling;
+                if (nextRow) {
+                    const blank = nextRow.querySelector('.blank');
+                    if (blank) {
+                        return blank.textContent.trim();
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    // Função auxiliar para extrair todos os campos de uma tabela
+    extrairCamposTabela(body, tabelaIndex) {
+        const tabelas = body.querySelectorAll('table');
+        if (tabelaIndex >= tabelas.length) return {};
+        
+        const tabela = tabelas[tabelaIndex];
+        const campos = {};
+        const linhas = tabela.querySelectorAll('tr');
+        
+        linhas.forEach(linha => {
+            const label = linha.querySelector('.label');
+            const blank = linha.querySelector('.blank');
+            
+            if (label && blank) {
+                const labelText = label.textContent.trim();
+                const valor = blank.textContent.trim();
+                // Criar chave única baseada no texto do label
+                const chave = labelText.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 30);
+                campos[chave] = { label: labelText, valor: valor };
+            }
+        });
+        
+        return campos;
+    }
+
+    // Extrair dados editáveis do template HTML
+    extrairDadosTemplate(template) {
+        if (!template) {
+            console.warn('⚠️ EDITOR VISUAL: Template vazio');
+            return null;
+        }
+        
+        console.log('🔍 EDITOR VISUAL: Extraindo dados do template...');
+        const dados = {};
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        
+        if (!body) {
+            console.warn('⚠️ EDITOR VISUAL: Body não encontrado');
+            return null;
+        }
+        
+        // Extrair informações da empresa
+        const empresaNome = body.querySelector('h1');
+        if (empresaNome) {
+            dados.empresaNome = empresaNome.textContent.trim();
+        }
+        
+        const empresaInfo = body.querySelectorAll('td[style*="width: 75%"] p, td[width="75%"] p');
+        if (empresaInfo.length > 0) {
+            dados.empresaEndereco = empresaInfo[0]?.textContent.trim() || '';
+            dados.empresaCidade = empresaInfo[1]?.textContent.trim() || '';
+            dados.empresaTelefone = empresaInfo[2]?.textContent.trim() || '';
+            dados.empresaContato = empresaInfo[3]?.textContent.trim() || '';
+        }
+        
+        // Extrair título do documento
+        const titulo = body.querySelector('td[colspan="2"] div[style*="font-size: 14px"]');
+        if (titulo) {
+            dados.tituloDocumento = titulo.textContent.trim();
+        }
+        
+        // Extrair instruções (CFN)
+        const instrucoes = body.querySelector('td[colspan="2"] p[style*="font-size: 9px"]');
+        if (instrucoes) {
+            dados.instrucoes = instrucoes.textContent.trim();
+        }
+        
+        // Extrair todos os labels (textos fixos que podem ser editados)
+        const tabelas = body.querySelectorAll('table');
+        tabelas.forEach((tabela, index) => {
+            if (index === 0) return; // Pular a primeira tabela (header)
+            
+            const linhas = tabela.querySelectorAll('tr');
+            linhas.forEach((linha, linhaIndex) => {
+                const labels = linha.querySelectorAll('.label');
+                
+                labels.forEach((label, labelIndex) => {
+                    const labelText = label.textContent.trim();
+                    if (labelText) {
+                        const chave = `label_${index}_${linhaIndex}_${labelIndex}_${labelText.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 20)}`;
+                        dados[chave] = {
+                            label: labelText,
+                            tabelaIndex: index,
+                            linhaIndex: linhaIndex,
+                            labelIndex: labelIndex,
+                            tipo: 'label'
+                        };
+                    }
+                });
+            });
+        });
+        
+        // Extrair textos fixos do rodapé (CFN)
+        const footer = body.querySelector('.footer');
+        if (footer) {
+            const footerParas = footer.querySelectorAll('p');
+            footerParas.forEach((para, index) => {
+                const texto = para.textContent.trim();
+                if (texto) {
+                    dados[`footer_${index}`] = {
+                        texto: texto,
+                        tipo: 'footer',
+                        index: index
+                    };
+                }
+            });
+        }
+        
+        // Extrair cabeçalhos de tabelas (th)
+        const ths = body.querySelectorAll('th');
+        ths.forEach((th, index) => {
+            const texto = th.textContent.trim();
+            if (texto) {
+                dados[`th_${index}`] = {
+                    texto: texto,
+                    tipo: 'th',
+                    index: index
+                };
+            }
+        });
+        
+        console.log('✅ EDITOR VISUAL: Dados extraídos:', Object.keys(dados).length, 'campos');
+        return dados;
+    }
+
+    // Atualizar editor visual com formulário
+    atualizarEditorVisual() {
+        console.log('🔍 EDITOR VISUAL: Atualizando interface do editor visual...');
+        
+        if (!this.notaAtual || !this.notaAtual.template) {
+            console.warn('⚠️ EDITOR VISUAL: Nota atual ou template não encontrado');
+            const editorVisual = document.getElementById('editorVisual');
+            if (editorVisual) {
+                editorVisual.innerHTML = '<p style="padding: 20px; color: #999;">Nenhum template disponível para edição visual.</p>';
+            }
+            return;
+        }
+        
+        const dados = this.extrairDadosTemplate(this.notaAtual.template);
+        const editorVisual = document.getElementById('editorVisual');
+        if (!editorVisual) {
+            console.error('❌ EDITOR VISUAL: Elemento editorVisual não encontrado no DOM');
+            return;
+        }
+        
+        const isCFN = this.notaAtual.nome && this.notaAtual.nome.includes('CFN');
+        const isCertificado = this.notaAtual.nome && this.notaAtual.nome.includes('Certificado');
+        
+        let html = '<div class="visual-editor-form">';
+        
+        // Seção: Informações da Empresa
+        html += '<div class="form-section">';
+        html += '<h3>📋 Informações da Empresa</h3>';
+        html += '<div class="form-group">';
+        html += '<label>Nome da Empresa:</label>';
+        html += `<input type="text" id="visual-empresaNome" class="form-input" value="${(dados?.empresaNome || '').replace(/"/g, '&quot;')}" placeholder="Ex: SEVEN NAVEGAÇÃO LTDA">`;
+        html += '</div>';
+        
+        html += '<div class="form-group">';
+        html += '<label>Endereço:</label>';
+        html += `<input type="text" id="visual-empresaEndereco" class="form-input" value="${(dados?.empresaEndereco || '').replace(/"/g, '&quot;')}" placeholder="Ex: Av. Dos Holandeses, Ed. tech Office...">`;
+        html += '</div>';
+        
+        html += '<div class="form-group">';
+        html += '<label>Cidade/Estado/CEP:</label>';
+        html += `<input type="text" id="visual-empresaCidade" class="form-input" value="${(dados?.empresaCidade || '').replace(/"/g, '&quot;')}" placeholder="Ex: São Luís - MA - CEP: 65.077-357">`;
+        html += '</div>';
+        
+        html += '<div class="form-group">';
+        html += '<label>Telefone:</label>';
+        html += `<input type="text" id="visual-empresaTelefone" class="form-input" value="${(dados?.empresaTelefone || '').replace(/"/g, '&quot;')}" placeholder="Ex: Fone: 98 99117-1988 e 99161-5880">`;
+        html += '</div>';
+        
+        html += '<div class="form-group">';
+        html += '<label>Website/E-mail:</label>';
+        html += `<input type="text" id="visual-empresaContato" class="form-input" value="${(dados?.empresaContato || '').replace(/"/g, '&quot;')}" placeholder="Ex: www.sevennav.com.br | recepcao.apoioportuario@gmail.com">`;
+        html += '</div>';
+        
+        html += '</div>';
+        
+        // Seção: Título do Documento
+        html += '<div class="form-section">';
+        html += '<h3>📄 Título do Documento</h3>';
+        html += '<div class="form-group">';
+        html += '<label>Título:</label>';
+        html += `<input type="text" id="visual-tituloDocumento" class="form-input" value="${(dados?.tituloDocumento || '').replace(/"/g, '&quot;')}" placeholder="Ex: Comprovante de Fornecimento a Navio - CFN">`;
+        html += '</div>';
+        
+        if (isCFN) {
+            html += '<div class="form-group">';
+            html += '<label>Instruções:</label>';
+            html += `<textarea id="visual-instrucoes" class="form-textarea" rows="2" placeholder="Ex: Preencher com letras de forma - NÃO RASURAR">${(dados?.instrucoes || '').replace(/"/g, '&quot;')}</textarea>`;
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        // Seção: Labels dos Campos (textos fixos que aparecem antes dos campos em branco)
+        const labelsExtras = Object.keys(dados).filter(k => k.startsWith('label_'));
+        if (labelsExtras.length > 0) {
+            html += '<div class="form-section">';
+            html += '<h3>🏷️ Labels dos Campos</h3>';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 10px;">Edite os textos que aparecem antes dos campos em branco</p>';
+            html += '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">';
+            
+            // Agrupar labels por tabela
+            const labelsPorTabela = {};
+            labelsExtras.forEach(chave => {
+                const campo = dados[chave];
+                if (campo && campo.label) {
+                    const tabelaIndex = campo.tabelaIndex;
+                    if (!labelsPorTabela[tabelaIndex]) {
+                        labelsPorTabela[tabelaIndex] = [];
+                    }
+                    labelsPorTabela[tabelaIndex].push({ chave, campo });
+                }
+            });
+            
+            // Renderizar por tabela
+            Object.keys(labelsPorTabela).sort((a, b) => a - b).forEach(tabelaIndex => {
+                html += `<div style="margin-bottom: 20px; padding: 10px; background: #f9f9f9; border-radius: 4px;">`;
+                html += `<h4 style="margin: 0 0 10px 0; font-size: 14px; color: #1d1b78;">Tabela ${parseInt(tabelaIndex)}</h4>`;
+                
+                labelsPorTabela[tabelaIndex].forEach(({ chave, campo }) => {
+                    html += '<div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">';
+                    html += `<input type="text" id="${chave}" class="form-input" value="${(campo.label || '').replace(/"/g, '&quot;')}" placeholder="Ex: Nome do Navio (Ship's name)" style="flex: 1;">`;
+                    html += `<button type="button" class="btn-remover-label" data-chave="${chave}" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>`;
+                    html += '</div>';
+                });
+                
+                html += `<button type="button" class="btn-adicionar-label" data-tabela="${tabelaIndex}" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 8px;">➕ Adicionar Label</button>`;
+                html += `</div>`;
+            });
+            
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Botão para adicionar nova tabela
+        html += '<div class="form-section">';
+        html += '<h3>📋 Gerenciar Tabelas</h3>';
+        html += '<button type="button" id="btnAdicionarTabela" class="btn btn-primary" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px;">➕ Adicionar Nova Tabela</button>';
+        html += '</div>';
+        
+        // Seção: Cabeçalhos de Tabelas
+        const thsExtras = Object.keys(dados).filter(k => k.startsWith('th_'));
+        if (thsExtras.length > 0) {
+            html += '<div class="form-section">';
+            html += '<h3>📊 Cabeçalhos de Tabelas</h3>';
+            html += '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">';
+            
+            thsExtras.forEach(chave => {
+                const campo = dados[chave];
+                if (campo && campo.texto) {
+                    html += '<div class="form-group">';
+                    html += `<label>Cabeçalho:</label>`;
+                    html += `<input type="text" id="${chave}" class="form-input" value="${(campo.texto || '').replace(/"/g, '&quot;')}">`;
+                    html += '</div>';
+                }
+            });
+            
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Seção: Rodapé (CFN)
+        const footerExtras = Object.keys(dados).filter(k => k.startsWith('footer_'));
+        if (footerExtras.length > 0) {
+            html += '<div class="form-section">';
+            html += '<h3>📄 Rodapé</h3>';
+            html += '<div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">';
+            
+            footerExtras.forEach(chave => {
+                const campo = dados[chave];
+                if (campo && campo.texto) {
+                    html += '<div class="form-group">';
+                    html += `<label>Texto do Rodapé:</label>`;
+                    html += `<textarea id="${chave}" class="form-textarea" rows="2">${(campo.texto || '').replace(/"/g, '&quot;')}</textarea>`;
+                    html += '</div>';
+                }
+            });
+            
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        html += '<div class="form-actions">';
+        html += '<button id="btnAplicarVisual" class="btn btn-success">✅ Aplicar Alterações</button>';
+        html += '</div>';
+        
+        html += '</div>';
+        
+        editorVisual.innerHTML = html;
+        
+        // Adicionar eventos aos botões (usar setTimeout para garantir que o DOM foi atualizado)
+        setTimeout(() => {
+            const btnAplicar = document.getElementById('btnAplicarVisual');
+            if (btnAplicar) {
+                console.log('✅ EDITOR VISUAL: Botão "Aplicar Alterações" encontrado e evento adicionado');
+                btnAplicar.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('🔍 EDITOR VISUAL: Botão clicado - aplicando alterações...');
+                    this.aplicarAlteracoesVisuais();
+                });
+            } else {
+                console.error('❌ EDITOR VISUAL: Botão "Aplicar Alterações" não encontrado no DOM');
+            }
+            
+            // Eventos para remover labels
+            const editorVisual = document.getElementById('editorVisual');
+            if (editorVisual) {
+                editorVisual.querySelectorAll('.btn-remover-label').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const chave = e.target.getAttribute('data-chave');
+                        this.removerLabel(chave);
+                    });
+                });
+                
+                // Eventos para adicionar labels
+                editorVisual.querySelectorAll('.btn-adicionar-label').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tabelaIndex = e.target.getAttribute('data-tabela');
+                        this.adicionarLabel(tabelaIndex);
+                    });
+                });
+            }
+            
+            // Evento para adicionar nova tabela
+            const btnAdicionarTabela = document.getElementById('btnAdicionarTabela');
+            if (btnAdicionarTabela) {
+                btnAdicionarTabela.addEventListener('click', () => {
+                    this.adicionarNovaTabela();
+                });
+            }
+        }, 100);
+        
+        // Adicionar eventos de input para atualização automática com debounce
+        const inputs = editorVisual.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                // Debounce: aguardar 500ms após parar de digitar antes de aplicar
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(() => {
+                    this.aplicarAlteracoesVisuais();
+                }, 500);
+            });
+        });
+        
+        console.log('✅ EDITOR VISUAL: Interface do editor visual atualizada com sucesso');
+    }
+
+    // Aplicar alterações do editor visual ao template
+    aplicarAlteracoesVisuais() {
+        console.log('🔍 EDITOR VISUAL: Iniciando aplicação de alterações...');
+        
+        if (!this.notaAtual || !this.notaAtual.template) {
+            console.warn('⚠️ EDITOR VISUAL: Nota atual ou template não encontrado');
+            return;
+        }
+        
+        let template = this.notaAtual.template;
+        const isCFN = this.notaAtual.nome && this.notaAtual.nome.includes('CFN');
+        const isCertificado = this.notaAtual.nome && this.notaAtual.nome.includes('Certificado');
+        
+        console.log('🔍 EDITOR VISUAL: Tipo de nota:', isCFN ? 'CFN' : (isCertificado ? 'Certificado' : 'Outro'));
+        
+        // Obter valores dos campos
+        const empresaNome = document.getElementById('visual-empresaNome')?.value || '';
+        const empresaEndereco = document.getElementById('visual-empresaEndereco')?.value || '';
+        const empresaCidade = document.getElementById('visual-empresaCidade')?.value || '';
+        const empresaTelefone = document.getElementById('visual-empresaTelefone')?.value || '';
+        const empresaContato = document.getElementById('visual-empresaContato')?.value || '';
+        const tituloDocumento = document.getElementById('visual-tituloDocumento')?.value || '';
+        const instrucoes = document.getElementById('visual-instrucoes')?.value || '';
+        
+        console.log('🔍 EDITOR VISUAL: Valores capturados:', {
+            empresaNome,
+            empresaEndereco,
+            empresaCidade,
+            empresaTelefone,
+            empresaContato,
+            tituloDocumento,
+            instrucoes
+        });
+        
+        // Usar DOMParser para manipular o HTML de forma mais segura
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        
+        if (!body) {
+            console.error('❌ EDITOR VISUAL: Body não encontrado no documento');
+            return;
+        }
+        
+        if (isCFN) {
+            console.log('🔍 EDITOR VISUAL: Processando template CFN...');
+            // Atualizar nome da empresa (h1 dentro da tabela do header)
+            const h1 = body.querySelector('td[width="75%"] h1');
+            if (h1) {
+                console.log('✅ EDITOR VISUAL: Atualizando h1 (nome empresa)');
+                h1.textContent = empresaNome;
+            } else {
+                console.warn('⚠️ EDITOR VISUAL: h1 não encontrado no template CFN');
+            }
+            
+            // Atualizar parágrafos de informação da empresa
+            const infoParas = body.querySelectorAll('td[width="75%"] p');
+            console.log('🔍 EDITOR VISUAL: Encontrados', infoParas.length, 'parágrafos de informação');
+            if (infoParas.length >= 1 && empresaEndereco) {
+                infoParas[0].textContent = empresaEndereco;
+                console.log('✅ EDITOR VISUAL: Endereço atualizado');
+            }
+            if (infoParas.length >= 2 && empresaCidade) {
+                infoParas[1].textContent = empresaCidade;
+                console.log('✅ EDITOR VISUAL: Cidade atualizada');
+            }
+            if (infoParas.length >= 3 && empresaTelefone) {
+                infoParas[2].textContent = empresaTelefone;
+                console.log('✅ EDITOR VISUAL: Telefone atualizado');
+            }
+            if (infoParas.length >= 4 && empresaContato) {
+                infoParas[3].textContent = empresaContato;
+                console.log('✅ EDITOR VISUAL: Contato atualizado');
+            }
+            
+            // Atualizar título do documento
+            const tituloDiv = body.querySelector('td[colspan="2"] div[style*="font-size: 14px"]');
+            if (tituloDiv && tituloDocumento) {
+                tituloDiv.textContent = tituloDocumento;
+                console.log('✅ EDITOR VISUAL: Título do documento atualizado');
+            } else {
+                console.warn('⚠️ EDITOR VISUAL: Título div não encontrado');
+            }
+            
+            // Atualizar instruções
+            const instrucoesP = body.querySelector('td[colspan="2"] p[style*="font-size: 9px"]');
+            if (instrucoesP && instrucoes) {
+                instrucoesP.innerHTML = instrucoes.replace(/\n/g, '<br>');
+                console.log('✅ EDITOR VISUAL: Instruções atualizadas');
+            }
+        } else if (isCertificado) {
+            console.log('🔍 EDITOR VISUAL: Processando template Certificado...');
+            
+            // Buscar a primeira tabela (header)
+            const firstTable = body.querySelector('table');
+            if (!firstTable) {
+                console.error('❌ EDITOR VISUAL: Primeira tabela não encontrada');
+            } else {
+                // Atualizar nome da empresa (h1 dentro da tabela do header)
+                // Buscar td com style width="75%" ou width="75%"
+                const td75 = firstTable.querySelector('td[style*="width: 75%"]') || firstTable.querySelector('td[width="75%"]');
+                if (!td75) {
+                    // Tentar buscar pela segunda td da primeira linha
+                    const firstRow = firstTable.querySelector('tr');
+                    if (firstRow) {
+                        const tds = firstRow.querySelectorAll('td');
+                        if (tds.length >= 2) {
+                            const td75Alt = tds[1]; // Segunda td (índice 1)
+                            console.log('✅ EDITOR VISUAL: Usando segunda td da primeira linha');
+                            
+                            // Atualizar h1
+                            const h1 = td75Alt.querySelector('h1');
+                            if (h1) {
+                                h1.textContent = empresaNome;
+                                console.log('✅ EDITOR VISUAL: Atualizando h1 (nome empresa)');
+                            }
+                            
+                            // Atualizar parágrafos
+                            const infoParas = td75Alt.querySelectorAll('p');
+                            console.log('🔍 EDITOR VISUAL: Encontrados', infoParas.length, 'parágrafos de informação');
+                            if (infoParas.length >= 1 && empresaEndereco) {
+                                infoParas[0].textContent = empresaEndereco;
+                                console.log('✅ EDITOR VISUAL: Endereço atualizado');
+                            }
+                            if (infoParas.length >= 2 && empresaCidade) {
+                                infoParas[1].textContent = empresaCidade;
+                                console.log('✅ EDITOR VISUAL: Cidade atualizada');
+                            }
+                            if (infoParas.length >= 3 && empresaTelefone) {
+                                infoParas[2].textContent = empresaTelefone;
+                                console.log('✅ EDITOR VISUAL: Telefone atualizado');
+                            }
+                            if (infoParas.length >= 4 && empresaContato) {
+                                infoParas[3].textContent = empresaContato;
+                                console.log('✅ EDITOR VISUAL: Contato atualizado');
+                            }
+                        }
+                    }
+                } else {
+                    // Atualizar nome da empresa (h1 dentro da tabela do header)
+                    const h1 = td75.querySelector('h1');
+                    if (h1) {
+                        console.log('✅ EDITOR VISUAL: Atualizando h1 (nome empresa)');
+                        h1.textContent = empresaNome;
+                    } else {
+                        console.warn('⚠️ EDITOR VISUAL: h1 não encontrado no template Certificado');
+                    }
+                    
+                    // Atualizar parágrafos de informação da empresa
+                    const infoParas = td75.querySelectorAll('p');
+                    console.log('🔍 EDITOR VISUAL: Encontrados', infoParas.length, 'parágrafos de informação');
+                    if (infoParas.length >= 1 && empresaEndereco) {
+                        infoParas[0].textContent = empresaEndereco;
+                        console.log('✅ EDITOR VISUAL: Endereço atualizado');
+                    }
+                    if (infoParas.length >= 2 && empresaCidade) {
+                        infoParas[1].textContent = empresaCidade;
+                        console.log('✅ EDITOR VISUAL: Cidade atualizada');
+                    }
+                    if (infoParas.length >= 3 && empresaTelefone) {
+                        infoParas[2].textContent = empresaTelefone;
+                        console.log('✅ EDITOR VISUAL: Telefone atualizado');
+                    }
+                    if (infoParas.length >= 4 && empresaContato) {
+                        infoParas[3].textContent = empresaContato;
+                        console.log('✅ EDITOR VISUAL: Contato atualizado');
+                    }
+                }
+            }
+            
+            // Atualizar título do documento (na segunda linha da primeira tabela)
+            const tituloDiv = body.querySelector('td[colspan="2"] div[style*="font-size: 14px"]');
+            if (tituloDiv && tituloDocumento) {
+                tituloDiv.textContent = tituloDocumento;
+                console.log('✅ EDITOR VISUAL: Título do documento atualizado');
+            } else {
+                console.warn('⚠️ EDITOR VISUAL: Título div não encontrado');
+            }
+        }
+        
+        // Atualizar todos os labels (textos fixos)
+        const tabelas = body.querySelectorAll('table');
+        tabelas.forEach((tabela, tabelaIndex) => {
+            if (tabelaIndex === 0) return; // Pular a primeira tabela (header)
+            
+            const linhas = tabela.querySelectorAll('tr');
+            linhas.forEach((linha, linhaIndex) => {
+                const labels = linha.querySelectorAll('.label');
+                
+                labels.forEach((label, labelIndex) => {
+                    const labelTextOriginal = label.textContent.trim();
+                    if (labelTextOriginal) {
+                        const chave = `label_${tabelaIndex}_${linhaIndex}_${labelIndex}_${labelTextOriginal.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 20)}`;
+                        const input = document.getElementById(chave);
+                        
+                        if (input && input.value) {
+                            label.textContent = input.value;
+                            console.log(`✅ EDITOR VISUAL: Label atualizado`);
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Atualizar cabeçalhos de tabelas (th)
+        const ths = body.querySelectorAll('th');
+        ths.forEach((th, index) => {
+            const chave = `th_${index}`;
+            const input = document.getElementById(chave);
+            
+            if (input && input.value) {
+                th.textContent = input.value;
+                console.log(`✅ EDITOR VISUAL: Cabeçalho de tabela atualizado`);
+            }
+        });
+        
+        // Atualizar rodapé (CFN)
+        const footer = body.querySelector('.footer');
+        if (footer) {
+            const footerParas = footer.querySelectorAll('p');
+            footerParas.forEach((para, index) => {
+                const chave = `footer_${index}`;
+                const input = document.getElementById(chave);
+                
+                if (input && input.value) {
+                    para.textContent = input.value;
+                    console.log(`✅ EDITOR VISUAL: Texto do rodapé atualizado`);
+                }
+            });
+        }
+        
+        // Converter de volta para string HTML
+        template = doc.documentElement.outerHTML;
+        
+        // Atualizar template e preview
+        this.notaAtual.template = template;
+        const editor = document.getElementById('editorTemplate');
+        if (editor) {
+            editor.value = template;
+        }
+        
+        console.log('✅ EDITOR VISUAL: Alterações aplicadas com sucesso! Template atualizado.');
+        this.atualizarPreview();
+    }
+
+    // Remover um label do template
+    removerLabel(chave) {
+        if (!this.notaAtual || !this.notaAtual.template) return;
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(this.notaAtual.template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        if (!body) return;
+        
+        // Extrair informações da chave
+        const partes = chave.split('_');
+        if (partes.length < 4) return;
+        
+        const tabelaIndex = parseInt(partes[1]);
+        const linhaIndex = parseInt(partes[2]);
+        const labelIndex = parseInt(partes[3]);
+        
+        const tabelas = body.querySelectorAll('table');
+        if (tabelaIndex >= tabelas.length) return;
+        
+        const tabela = tabelas[tabelaIndex];
+        const linhas = tabela.querySelectorAll('tr');
+        if (linhaIndex >= linhas.length) return;
+        
+        const linha = linhas[linhaIndex];
+        const labels = linha.querySelectorAll('.label');
+        if (labelIndex >= labels.length) return;
+        
+        const label = labels[labelIndex];
+        const blank = linha.querySelector('.blank');
+        
+        // Remover a linha inteira se só tiver esse label, ou remover apenas o label e blank
+        if (labels.length === 1 && linha.querySelectorAll('.blank').length <= 1) {
+            linha.remove();
+        } else {
+            // Remover label e blank correspondente
+            label.remove();
+            if (blank) blank.remove();
+        }
+        
+        // Atualizar template
+        this.notaAtual.template = doc.documentElement.outerHTML;
+        const editor = document.getElementById('editorTemplate');
+        if (editor) {
+            editor.value = this.notaAtual.template;
+        }
+        
+        // Recarregar editor visual
+        this.atualizarEditorVisual();
+        this.atualizarPreview();
+    }
+    
+    // Remover um label do template
+    removerLabel(chave) {
+        if (!this.notaAtual || !this.notaAtual.template) return;
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(this.notaAtual.template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        if (!body) return;
+        
+        // Extrair informações da chave
+        const partes = chave.split('_');
+        if (partes.length < 4) return;
+        
+        const tabelaIndex = parseInt(partes[1]);
+        const linhaIndex = parseInt(partes[2]);
+        const labelIndex = parseInt(partes[3]);
+        
+        const tabelas = body.querySelectorAll('table');
+        if (tabelaIndex >= tabelas.length) return;
+        
+        const tabela = tabelas[tabelaIndex];
+        const linhas = tabela.querySelectorAll('tr');
+        if (linhaIndex >= linhas.length) return;
+        
+        const linha = linhas[linhaIndex];
+        const labels = linha.querySelectorAll('.label');
+        if (labelIndex >= labels.length) return;
+        
+        const label = labels[labelIndex];
+        const blank = linha.querySelector('.blank');
+        
+        // Remover a linha inteira se só tiver esse label, ou remover apenas o label e blank
+        if (labels.length === 1 && linha.querySelectorAll('.blank').length <= 1) {
+            linha.remove();
+        } else {
+            // Remover label e blank correspondente
+            label.remove();
+            if (blank) blank.remove();
+        }
+        
+        // Atualizar template
+        this.notaAtual.template = doc.documentElement.outerHTML;
+        const editor = document.getElementById('editorTemplate');
+        if (editor) {
+            editor.value = this.notaAtual.template;
+        }
+        
+        // Recarregar editor visual
+        this.atualizarEditorVisual();
+        this.atualizarPreview();
+    }
+    
+    // Adicionar um novo label em uma tabela existente
+    adicionarLabel(tabelaIndex) {
+        if (!this.notaAtual || !this.notaAtual.template) return;
+        
+        const novoLabel = prompt('Digite o texto do novo label:');
+        if (!novoLabel || novoLabel.trim() === '') return;
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(this.notaAtual.template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        if (!body) return;
+        
+        const tabelaIndexNum = parseInt(tabelaIndex);
+        const tabelas = body.querySelectorAll('table');
+        if (tabelaIndexNum >= tabelas.length) return;
+        
+        const tabela = tabelas[tabelaIndexNum];
+        
+        // Criar nova linha com label e blank
+        const novaLinha = doc.createElement('tr');
+        novaLinha.innerHTML = `
+            <td class="label" style="width: 50%;">${this.escapeHtml(novoLabel)}</td>
+            <td class="blank" style="width: 50%;"></td>
+        `;
+        
+        // Adicionar ao final da tabela
+        tabela.appendChild(novaLinha);
+        
+        // Atualizar template
+        this.notaAtual.template = doc.documentElement.outerHTML;
+        const editor = document.getElementById('editorTemplate');
+        if (editor) {
+            editor.value = this.notaAtual.template;
+        }
+        
+        // Recarregar editor visual
+        this.atualizarEditorVisual();
+        this.atualizarPreview();
+    }
+    
+    // Adicionar uma nova tabela ao template
+    adicionarNovaTabela() {
+        if (!this.notaAtual || !this.notaAtual.template) return;
+        
+        const numLabels = prompt('Quantos labels/campos deseja na nova tabela?', '2');
+        if (!numLabels || isNaN(numLabels) || parseInt(numLabels) < 1) return;
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(this.notaAtual.template, 'text/html');
+        const body = doc.body || doc.querySelector('body');
+        if (!body) return;
+        
+        // Criar nova tabela
+        const novaTabela = doc.createElement('table');
+        novaTabela.style.margin = '8px 0';
+        novaTabela.style.fontSize = '13px';
+        novaTabela.style.border = '1px solid #1d1b78';
+        
+        for (let i = 0; i < parseInt(numLabels); i++) {
+            const linha = doc.createElement('tr');
+            linha.innerHTML = `
+                <td class="label" style="width: 50%;">Novo Label ${i + 1}</td>
+                <td class="blank" style="width: 50%;"></td>
+            `;
+            novaTabela.appendChild(linha);
+        }
+        
+        // Adicionar antes da área de assinatura ou no final
+        const signatureArea = body.querySelector('.signature-area');
+        const footer = body.querySelector('.footer');
+        const container = body.querySelector('.document-container');
+        
+        if (signatureArea) {
+            container.insertBefore(novaTabela, signatureArea);
+        } else if (footer) {
+            container.insertBefore(novaTabela, footer);
+        } else {
+            container.appendChild(novaTabela);
+        }
+        
+        // Atualizar template
+        this.notaAtual.template = doc.documentElement.outerHTML;
+        const editor = document.getElementById('editorTemplate');
+        if (editor) {
+            editor.value = this.notaAtual.template;
+        }
+        
+        // Recarregar editor visual
+        this.atualizarEditorVisual();
+        this.atualizarPreview();
+    }
+    
+    // Escapar HTML para evitar XSS
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // Corrigir caminhos de imagens no template para funcionar no iframe
     corrigirCaminhosTemplate(template) {
         if (!template) return template;
@@ -943,9 +1758,6 @@ class GerenciadorNotas {
             baseUrl += '/';
         }
         
-        console.log('🔍 DEBUG: URL base calculada:', baseUrl);
-        console.log('🔍 DEBUG: URL completa da página:', window.location.href);
-        
         // Substituir caminhos relativos de imagens por absolutos
         template = template.replace(
             /src="assets\//g, 
@@ -958,14 +1770,6 @@ class GerenciadorNotas {
             `src="${baseUrl}assets/`
         );
         
-        // Verificar se há alguma referência à logo
-        const logoMatches = template.match(/src="[^"]*LOGO[^"]*"/g);
-        if (logoMatches) {
-            console.log('🔍 DEBUG: Caminhos da logo encontrados:', logoMatches);
-        } else {
-            console.warn('⚠️ DEBUG: Nenhum caminho da logo encontrado no template');
-        }
-        
         return template;
     }
 
@@ -973,11 +1777,8 @@ class GerenciadorNotas {
     atualizarPreview() {
         const preview = document.getElementById('previewNota');
         if (!preview || !this.notaAtual) {
-            console.log('⚠️ DEBUG: Preview ou nota atual não encontrado');
             return;
         }
-        
-        console.log('🔍 DEBUG: Atualizando preview para nota:', this.notaAtual.nome);
         
         // Tentar usar template, se não tiver, usar conteudo convertido
         let template = this.notaAtual.template;
@@ -988,34 +1789,9 @@ class GerenciadorNotas {
         if (template) {
             // Corrigir caminhos antes de renderizar
             template = this.corrigirCaminhosTemplate(template);
-            
-            // Adicionar script de debug no iframe
-            template = template.replace('</body>', `
-                <script>
-                    console.log('🔍 DEBUG: Iframe carregado');
-                    window.addEventListener('load', function() {
-                        const img = document.querySelector('img[src*="LOGO"]');
-                        if (img) {
-                            console.log('🔍 DEBUG: Imagem encontrada, src:', img.src);
-                            img.onerror = function() {
-                                console.error('❌ DEBUG: Erro ao carregar logo:', this.src);
-                                console.error('❌ DEBUG: URL completa:', window.location.href);
-                            };
-                            img.onload = function() {
-                                console.log('✅ DEBUG: Logo carregada com sucesso!');
-                            };
-                        } else {
-                            console.warn('⚠️ DEBUG: Imagem da logo não encontrada no DOM');
-                        }
-                    });
-                </script>
-            </body>`);
-            
             preview.srcdoc = template;
-            console.log('✅ DEBUG: Preview atualizado');
         } else {
             preview.srcdoc = '<html><body><p style="padding: 20px; color: #999;">Nenhum template disponível. Edite a nota para adicionar conteúdo.</p></body></html>';
-            console.warn('⚠️ DEBUG: Nenhum template disponível');
         }
     }
 
@@ -1045,8 +1821,6 @@ class GerenciadorNotas {
     gerarNota() {
         if (!this.notaAtual) return;
         
-        console.log('🔍 DEBUG: Gerando nota para impressão:', this.notaAtual.nome);
-        
         // Tentar usar template, se não tiver, usar conteudo convertido
         let template = this.notaAtual.template;
         if (!template && this.notaAtual.conteudo) {
@@ -1071,8 +1845,6 @@ class GerenciadorNotas {
     // Visualizar nota em nova aba
     visualizarNota() {
         if (!this.notaAtual) return;
-        
-        console.log('🔍 DEBUG: Visualizando nota:', this.notaAtual.nome);
         
         // Se não tiver template, tentar usar conteudo ou criar um básico
         let template = this.notaAtual.template;

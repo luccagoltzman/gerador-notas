@@ -43,10 +43,16 @@
                     </div>
                     <div class="editor-body">
                         <div class="editor-tabs">
-                            <button class="tab-btn active" data-tab="editor">✏️ Editor HTML</button>
+                            <button class="tab-btn active" data-tab="visual">✏️ Editor Visual</button>
+                            <button class="tab-btn" data-tab="editor">🔧 Editor HTML</button>
                             <button class="tab-btn" data-tab="preview">👁️ Visualização</button>
                         </div>
-                        <div class="tab-content active" id="tabEditor">
+                        <div class="tab-content active" id="tabVisual">
+                            <div id="editorVisual" class="editor-visual">
+                                <p class="help-text">💡 Edite os campos abaixo para personalizar sua nota. As alterações serão aplicadas automaticamente.</p>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="tabEditor">
                             <label for="editorTemplate">Template HTML da Nota:</label>
                             <textarea id="editorTemplate" class="textarea-template" placeholder="Cole ou edite o template HTML da nota aqui..."></textarea>
                             <p class="help-text">💡 Dica: Edite o HTML para personalizar o formato da nota. Use campos com bordas para áreas preenchíveis.</p>

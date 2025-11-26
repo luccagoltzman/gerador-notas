@@ -10,8 +10,18 @@
 <body>
     <div class="container">
         <header>
-            <h1>📋 Gerador de Notas</h1>
-            <p class="subtitle">Gerencie os tipos de notas da sua empresa marítima</p>
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="assets/logo/LOGO SEVEN.svg" alt="SEVEN NAVEGAÇÃO" class="logo" 
+                         onerror="console.error('❌ Erro ao carregar logo. Caminho:', this.src); this.style.display='none'; const fallback = this.nextElementSibling; if(fallback) fallback.style.display='flex';" 
+                         onload="console.log('✅ Logo carregada com sucesso:', this.src); this.style.opacity='1';">
+                    <div class="logo-fallback" style="display: none; width: 220px; height: 70px; background: rgba(255,255,255,0.2); border: 2px dashed rgba(255,255,255,0.5); border-radius: 8px; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.5em;">SEVEN</div>
+                </div>
+                <div class="header-text">
+                    <h1>Gerador de Notas</h1>
+                    <p class="subtitle">Gerencie os tipos de notas da sua empresa marítima</p>
+                </div>
+            </div>
         </header>
 
         <div class="main-content">

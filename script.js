@@ -1902,8 +1902,38 @@ class GerenciadorNotas {
     }
 }
 
+// Verificar e corrigir logo no header
+function verificarLogo() {
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        // Verificar se a imagem carregou
+        logo.addEventListener('error', function() {
+            console.error('❌ Logo não encontrada no caminho:', this.src);
+            // Tentar caminho alternativo
+            const caminhoAtual = this.src;
+            const caminhoAlternativo = caminhoAtual.replace('assets/logo/', './assets/logo/');
+            if (caminhoAtual !== caminhoAlternativo) {
+                console.log('🔄 Tentando caminho alternativo:', caminhoAlternativo);
+                this.src = caminhoAlternativo;
+            }
+        });
+        
+        logo.addEventListener('load', function() {
+            console.log('✅ Logo carregada com sucesso:', this.src);
+            this.style.opacity = '1';
+        });
+        
+        // Verificar se já está carregada
+        if (logo.complete && logo.naturalHeight !== 0) {
+            console.log('✅ Logo já estava carregada');
+            logo.style.opacity = '1';
+        }
+    }
+}
+
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
+    verificarLogo();
     new GerenciadorNotas();
 });
 
